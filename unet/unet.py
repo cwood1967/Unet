@@ -122,9 +122,10 @@ class unet3d():
             
     def create_loss(self, batch_mask):
         ''' calculate the loss of the network - cross entropy of input with output pixels'''
-        self.loss =  tf.nn.sigmoid_cross_entropy_with_logits(labels=batch_mask,
-                                                          logits=self.decoder,
-                                                          name='sce_loss')
+        loss =  tf.nn.sigmoid_cross_entropy_with_logits(labels=batch_mask,
+                                                        logits=self.decoder,
+                                                        name='sce_loss')
+        self.loss = tf.reduce_mean(tf.reduce_sum(loss, axis=(1,2,3,4)))
 
 
     def create_opt(self):
