@@ -4,6 +4,7 @@ import os
 import tensorflow as tf
 import numpy as np
 from skimage.io import imread
+from scipy.ndimage import rotate
 
 class unet3d():
 
@@ -22,7 +23,7 @@ class unet3d():
         self.dec_sizes = params['dec_sizes']
         self.droprate = params['droprate']
         self.stdev = params['stdev']
-        
+        self.used = dict()
 
     def leaky_relu(self, x, alpha=0.2):
 
@@ -125,7 +126,11 @@ class unet3d():
         loss =  tf.nn.sigmoid_cross_entropy_with_logits(labels=batch_mask,
                                                         logits=self.decoder,
                                                         name='sce_loss')
-        self.loss = tf.reduce_mean(tf.reduce_sum(loss, axis=(1,2,3,4)))
+        
+        s = tf.abs(tf.reduce_sum(self.decoder_sigmoid))
+        td = tf.reduce_mean(tf.reduce_sum(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4)))
+        print("mmse loss", td.shape)
+        self.loss = 0*tf.reduce_mean(tf.reduce_sum(loss, axis=(1,2,3,4))) + 1*td + 0*s
 
 
     def create_opt(self):
@@ -156,7 +161,52 @@ class unet3d():
         x = x[:,0:256, 0:256, :, :]
         self.x = x
 
+    def read_mm(self, mmpath, shape):
+        self.x = np.memmap(mmpath, dtype=np.float32, mode='r', shape=shape)
         
+    def augment_batch(self, b, nr):
+        n = b.shape[0]
+        ab = 0.0*b
+        nused = 0
+        for i, r in enumerate(nr):
+            s = b[i]  # this loses the first dimension
+            angle = 9*np.random.randint(0,360)
+            #flips = np.random.randint(0,2,3)
+            j = (r, angle)
+            if j in self.used:
+                ab[i] = self.used[j]
+                nused += 1
+            else:
+                s = rotate(s, angle, (0,1), reshape=False, order=1)
+                #print(s.shape)
+#                 flips = np.random.randint(0,2,3)
+#                 for k, f in enumerate(flips):
+#                     if f:
+#                         s = np.flip(s, k) 
+#                 ab[i] = s
+                self.used[j] = s
+            #print(angle, flips)
+        #print("Length of used:", len(self.used),  nused)
+        return ab 
+    
+    def get_batch(self, n, augment=True, training=True):
+        if training:
+            s = self.xtrain
+        else:
+            s = self.x
+        nx = s.shape[0]
+        nr = np.random.randint(0, nx, n)
+        b = s[nr,:,:,:, :]
+
+        if augment:
+            self.augment_batch(b , nr)
+
+        return b
+        
+    def set_validation(self, n):
+        self.xvalid = self.x[-n:]
+        self.xtrain = self.x[:-n]
+    
     def train(self, niterations):
         for i in range(10):
             nr = np.random.randint(0,36, 1)
