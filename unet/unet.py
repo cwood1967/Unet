@@ -61,14 +61,14 @@ class unet3d():
                 h = self.dropout(h, self.droprate, is_train)
 
             name = 'encoder-layer-{}'.format(nfilters)
-            h = tf.layers.conv3d(h, nfilters, ksize, strides=1,
-                                 padding=padding,
-                                 kernel_initializer=self.get_init(self.stdev),
-                                 name=name, activation=None)
+            # h = tf.layers.conv3d(h, nfilters, ksize, strides=1,
+            #                      padding=padding,
+            #                      kernel_initializer=self.get_init(self.stdev),
+            #                      name=name, activation=None)
             
-            h = self.leaky_relu(h)
-            if self.droprate > 0:
-                h = self.dropout(h, self.droprate, is_train)
+            # h = self.leaky_relu(h)
+            # if self.droprate > 0:
+            #     h = self.dropout(h, self.droprate, is_train)
     
             layers.append(h) ## only append the second convolution
             ### use identity to rename the final tensor 
@@ -98,23 +98,25 @@ class unet3d():
             h = self.leaky_relu(h)
             nl = len(self.encoder_layers) - i - 2
             print(nl, self.encoder_layers[nl])
-            #h = tf.concat([h, self.encoder_layers[nl]], -1,
-            #              name='concat-{}'.format(nfilters))
+            h = tf.concat([h, self.encoder_layers[nl]], -1,
+                          name='concat-{}'.format(nfilters))
 
+            print('after concat', h)
             h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
                           kernel_initializer=self.get_init(self.stdev),
                           name='decoder-conv-{}-1'.format(nfilters),
                           activation=None)
 
             h = self.leaky_relu(h)
-            
-            h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
-                          kernel_initializer=self.get_init(self.stdev),
-                          name='decoder-conv-{}-2'.format(nfilters),
-                          activation=None)
+            print(h)
+            # h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
+            #               kernel_initializer=self.get_init(self.stdev),
+            #               name='decoder-conv-{}-2'.format(nfilters),
+            #               activation=None)
 
-            if i < (len(self.dec_sizes) - 2):
-                h = self.leaky_relu(h)
+            # if i < (len(self.dec_sizes) - 2):
+            #     h = self.leaky_relu(h)
+            # print(h)
             ph = h    
             h = tf.identity(h, name='decoder-{}'.format(nfilters))
 
@@ -130,7 +132,7 @@ class unet3d():
         s = tf.abs(tf.reduce_sum(self.decoder_sigmoid))
         td = tf.reduce_mean(tf.reduce_sum(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4)))
         print("mmse loss", td.shape)
-        self.loss = 0*tf.reduce_mean(tf.reduce_sum(loss, axis=(1,2,3,4))) + 1*td + 0*s
+        self.loss = tf.reduce_mean(tf.reduce_sum(loss, axis=(1,2,3,4))) + 0*td + 0*s
 
 
     def create_opt(self):
