@@ -52,6 +52,7 @@ class unet3d():
             padding = 'same'
             print(ei)
             name = 'encoder-layer-{}-0'.format(nfilters)
+            ph = layers[-1]
             h = tf.layers.conv3d(ph, nfilters, ksize, strides=strides,
                                  padding=padding,
                                  kernel_initializer=self.get_init(self.stdev),
@@ -72,10 +73,9 @@ class unet3d():
     
             layers.append(h) ## only append the second convolution
             ### use identity to rename the final tensor 
-            h = tf.identity(h, name='encoder-{}'.format(nfilters))
-            ph = h
+
         ### end the for loop for encoder layers
-    
+        h = tf.identity(h, name='encoder-{}'.format(nfilters))    
         self.encoder_layers = layers
         self.encoder = h
         
@@ -85,11 +85,13 @@ class unet3d():
         ### transpose, concat, conv, conv
         layers = list()
         ph = self.encoder
+        layers.append(self.encoder)
         for i, di in enumerate(self.dec_sizes):
             nfilters = di[0]
             ksize = di[1]
             strides = 2
             name = 'decoder-layer-{}'.format(nfilters)
+            ph = layers[-1]
             h = tf.layers.conv3d_transpose(ph, nfilters, ksize, strides,
                                            padding = 'same',
                                            activation=None,
@@ -109,6 +111,7 @@ class unet3d():
 
             h = self.leaky_relu(h)
             print(h)
+            layers.append(h)
             # h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
             #               kernel_initializer=self.get_init(self.stdev),
             #               name='decoder-conv-{}-2'.format(nfilters),
@@ -117,9 +120,9 @@ class unet3d():
             # if i < (len(self.dec_sizes) - 2):
             #     h = self.leaky_relu(h)
             # print(h)
-            ph = h    
-            h = tf.identity(h, name='decoder-{}'.format(nfilters))
-
+            #ph = h
+            
+        h = tf.identity(h, name='decoder-{}'.format(nfilters))
         self.decoder_sigmoid = tf.sigmoid(h, name='decoder-sigmoid')
         self.decoder = h
             
@@ -129,10 +132,11 @@ class unet3d():
                                                         logits=self.decoder,
                                                         name='sce_loss')
         
-        s = tf.abs(tf.reduce_sum(self.decoder_sigmoid))
-        td = tf.reduce_mean(tf.reduce_sum(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4)))
-        print("mmse loss", td.shape)
-        self.loss = tf.reduce_mean(tf.reduce_sum(loss, axis=(1,2,3,4))) + 0*td + 0*s
+#        s = tf.abs(tf.reduce_sum(self.decoder_sigmoid))
+#        td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4))  
+#        td = tf.reduce_mean(tf.reduce_sum(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4))) 
+#        print("mmse loss", td.shape)
+        self.loss = tf.reduce_mean(loss) 
 
 
     def create_opt(self):
