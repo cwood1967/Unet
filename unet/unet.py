@@ -48,16 +48,18 @@ class unet3d():
         for i, ei in enumerate(self.enc_sizes):
             nfilters = ei[0]
             ksize = ei[1]
-            strides = 2
+            strides = ei[2]
             padding = 'same'
-            print(ei)
+            print(ei, type(strides))
             name = 'encoder-layer-{}-0'.format(nfilters)
             ph = layers[-1]
             h = tf.layers.conv3d(ph, nfilters, ksize, strides=strides,
                                  padding=padding,
                                  kernel_initializer=self.get_init(self.stdev),
                                  name=name, activation=None)
-            h = self.leaky_relu(h)
+            #h = self.leaky_relu(h)
+            #if i < (len(self.enc_sizes) - 1):
+            #    h = tf.nn.relu(h)
             if self.droprate > 0:
                 h = self.dropout(h, self.droprate, is_train)
 
@@ -89,7 +91,7 @@ class unet3d():
         for i, di in enumerate(self.dec_sizes):
             nfilters = di[0]
             ksize = di[1]
-            strides = 2
+            strides = di[2]
             name = 'decoder-layer-{}'.format(nfilters)
             ph = layers[-1]
             h = tf.layers.conv3d_transpose(ph, nfilters, ksize, strides,
@@ -97,8 +99,11 @@ class unet3d():
                                            activation=None,
                                            name=name)
 
-            h = self.leaky_relu(h)
+            #h = self.leaky_relu(h)
+            #if i < (len(self.dec_sizes) - 1):
+            #    h = tf.nn.relu(h)
             nl = len(self.encoder_layers) - i - 2
+            print(h)
             print(nl, self.encoder_layers[nl])
             h = tf.concat([h, self.encoder_layers[nl]], -1,
                           name='concat-{}'.format(nfilters))
@@ -108,8 +113,9 @@ class unet3d():
                           kernel_initializer=self.get_init(self.stdev),
                           name='decoder-conv-{}-1'.format(nfilters),
                           activation=None)
-
-            h = self.leaky_relu(h)
+            #if i < (len(self.dec_sizes) - 1):
+                #h = self.leaky_relu(h)
+            #    h = tf.nn.relu(h)
             print(h)
             layers.append(h)
             # h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
@@ -134,9 +140,9 @@ class unet3d():
         
 #        s = tf.abs(tf.reduce_sum(self.decoder_sigmoid))
 #        td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4))  
-#        td = tf.reduce_mean(tf.reduce_sum(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4))) 
+        td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask))
 #        print("mmse loss", td.shape)
-        self.loss = tf.reduce_mean(loss) 
+        self.loss = tf.reduce_mean(loss) + td
 
 
     def create_opt(self):
@@ -169,6 +175,7 @@ class unet3d():
 
     def read_mm(self, mmpath, shape):
         self.x = np.memmap(mmpath, dtype=np.float32, mode='r', shape=shape)
+        self.x = np.moveaxis(self.x, 3, 1)
         
     def augment_batch(self, b, nr):
         n = b.shape[0]
