@@ -143,17 +143,17 @@ class unet2d():
             
     def create_loss(self, batch_mask):
         ''' calculate the loss of the network - cross entropy of input with output pixels'''
-        loss =  tf.nn.sigmoid_cross_entropy_with_logits(labels=batch_mask,
+        sigloss =  tf.nn.sigmoid_cross_entropy_with_logits(labels=batch_mask,
                                                         logits=self.decoder,
                                                         name='sce_loss')
-        loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels = batch_mask,
+        smloss = tf.nn.softmax_cross_entropy_with_logits_v2(labels = batch_mask,
                                                           logits=self.decoder,
                                                           dim=-1,
                                                           name='softmax_loss')
         
         #td = tf.reduce_mean(tf.square(self.decoder_softmax - batch_mask))
 #        print("mmse loss", td.shape)
-        self.loss = tf.reduce_mean(loss)
+        self.loss = tf.reduce_mean(smloss)
 
 
     def create_opt(self):
@@ -213,9 +213,16 @@ class unet2d():
         #print("Length of used:", len(self.used),  nused)
         return ab 
     
-    def get_patch(self, rf, rx, ry):
-        data = self.x
-        labels = self.y
+    def get_patch(self, rf, rx, ry, test=False):
+        if test:
+            data=self.xtest
+            labels = 0*self.y
+            labels = labels[:data.shape[0]]
+            rf = 0
+        else:
+            data = self.x
+            labels = self.y
+            
         size = self.width
         d = size//2
         ''' get all channels'''
@@ -223,14 +230,19 @@ class unet2d():
         label_patch = labels[rf, ry - d:ry  + d,rx - d:rx + d, :].copy()
         return data_patch, label_patch
 
-    def get_batch(self, num, ones=None, zeros=None, erode=0):
+    def get_batch(self, num, test=False, ones=None, zeros=None, erode=0):
         erode = 0
-        data = self.x
-        labels = self.y
+        if test:
+            data = self.xtest
+            labels = 0*self.y
+            labels = labels[data.shape[0]]
+        else:
+            data = self.x
+            labels = self.y
         size = self.width
         d = size//2
         batch = np.zeros((num, size, size, data.shape[-1]), dtype=np.float32)
-        mask = np.zeros((num, size, size, data.shape[-1] + 2), dtype=np.float32)
+        mask = np.zeros((num, size, size, labels.shape[-1]), dtype=np.float32)
 
         if ones == None:
             xrand = np.random.randint(d, data.shape[2] - d, num)
@@ -262,7 +274,7 @@ class unet2d():
             frand = frand[perm]
 
         for i in range(num):
-            a, b = self.get_patch(frand[i], xrand[i], yrand[i])
+            a, b = self.get_patch(frand[i], xrand[i], yrand[i], test=test)
             #print(a.shape)
             batch[i] = a
             mask[i] = b
