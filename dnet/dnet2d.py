@@ -10,7 +10,7 @@ from skimage.morphology import binary_dilation
 from skimage.morphology import erosion
 from skimage.morphology import dilation
 
-class unet2d():
+class dnet2d():
 
     def __init__(self, params):
         self.width = params['width']
@@ -21,8 +21,7 @@ class unet2d():
         self.learning_rate = params['learning_rate']
         self.restore = params['restore']
         self.latent_size = params['latent_size']
-        self.enc_sizes = params['enc_sizes']
-        self.dec_sizes = params['dec_sizes']
+        self.net_sizes = params['net_sizes'] ## [n filters, kernel_size, dilation_rate]
         self.droprate = params['droprate']
         self.stdev = params['stdev']
         self.used = dict()
@@ -40,51 +39,58 @@ class unet2d():
         #return tf.truncated_normal_initializer(stddev=stdev)
         return None
     
-    def create_encoder(self, images, is_train):
+    def create_dnet(self, images, is_train):
+        ''' cjw 2019/02/13 - going to use dilated conv. rather than u '''
         '''The encoder part of the network, must include weight tensors
         for concatenation, get the network sizes from the class'''
-    
+
+        ''' rename the self.enc_sizes to net_sizes'''
         layers = list()
         ph = images
         layers.append(images)
-        for i, ei in enumerate(self.enc_sizes):
+        for i, ei in enumerate(self.net_sizes):
             nfilters = ei[0]
             ksize = ei[1]
-            strides = ei[2]
+            drate = ei[2]
+            strides = 1
             padding = 'same'
             print(ei, type(strides))
-            name = 'encoder-layer-{}-0'.format(nfilters)
+            name = 'net-layer-{}-0'.format(i)
             ph = layers[-1]
             h = tf.layers.conv2d(ph, nfilters, ksize, strides=strides,
-                                 padding=padding, dilation_rate=1,
+                                 padding=padding, dilation_rate=drate,
                                  kernel_initializer=self.get_init(self.stdev),
                                  name=name, activation=None)
 
-            #h = self.leaky_relu(h)
-            if i < (len(self.enc_sizes) - 1):
-                h = tf.nn.relu(h)
-            if self.droprate > 0:
-                h = self.dropout(h, self.droprate, is_train)
-
-            name = 'encoder-layer-{}'.format(nfilters)
-            h = tf.layers.conv2d(h, nfilters, ksize, strides=1, dilation_rate=2,
+            print(h)
+            h = tf.nn.relu(h)
+            name = 'net-layer-{}'.format(i)
+            h = tf.layers.conv2d(h, nfilters, ksize, strides=strides, dilation_rate=drate,
                                  padding=padding,
                                  kernel_initializer=self.get_init(self.stdev),
                                  name=name, activation=None)
 
+            print(h)
+            print(ph)
+            print('----')
+            if i == 0:
+                layers.append(h)
+                continue
             
-            if i < (len(self.enc_sizes) - 1):
+            if i < (len(self.net_sizes) - 2):
                 h = tf.nn.relu(h)
-            # if self.droprate > 0:
-            #     h = self.dropout(h, self.droprate, is_train)
-    
+                h = ph + h
+            
             layers.append(h) ## only append the second convolution
-            ### use identity to rename the final tensor 
+            
 
         ### end the for loop for encoder layers
-        h = tf.identity(h, name='encoder-{}'.format(nfilters))    
-        self.encoder_layers = layers
-        self.encoder = h
+        h = tf.identity(h, name='encoder-{}'.format(nfilters))
+        self.decoder_sigmoid = tf.sigmoid(h, name='decoder-sigmoid')
+        self.decoder_softmax = tf.nn.softmax(h, dim=-1, name='decoder-softmax')
+ 
+        self.net_layers = layers
+        self.net = h
         
 
     def create_decoder(self):
@@ -133,9 +139,8 @@ class unet2d():
                 h = self.leaky_relu(h)
 
             layers.append(h)
-                # print(h)
-            #ph = h
-            
+        
+        
         h = tf.identity(h, name='decoder-{}'.format(nfilters))
         self.decoder_sigmoid = tf.sigmoid(h, name='decoder-sigmoid')
         self.decoder_softmax = tf.nn.softmax(h, dim=-1, name='decoder-softmax')
@@ -144,10 +149,10 @@ class unet2d():
     def create_loss(self, batch_mask):
         ''' calculate the loss of the network - cross entropy of input with output pixels'''
         sigloss =  tf.nn.sigmoid_cross_entropy_with_logits(labels=batch_mask,
-                                                        logits=self.decoder,
+                                                        logits=self.net,
                                                         name='sce_loss')
         smloss = tf.nn.softmax_cross_entropy_with_logits_v2(labels = batch_mask,
-                                                          logits=self.decoder,
+                                                          logits=self.net,
                                                           dim=-1,
                                                           name='softmax_loss')
         
@@ -296,6 +301,12 @@ class unet2d():
         return batch, mask
     ### end get_batch ###
 
+    def get_simple_batch(self, n):
+        nr = np.random.randint(0, self.xtrain.shape[0], n)
+        b = self.xtrain[nr,:,:,:]
+        m = self.ytrain[nr,:,:,:]
+        return b, m
+    
     '''
     def get_batch(self, n, augment=True, training=True):
         if training:
