@@ -151,7 +151,8 @@ class unet2d():
                                                           dim=-1,
                                                           name='softmax_loss')
         
-        #td = tf.reduce_mean(tf.square(self.decoder_softmax - batch_mask))
+        #td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask))
+        #tn = -tf.reduce_mean(tf.log(self.decoder_sigmoid + .00001))
 #        print("mmse loss", td.shape)
         self.loss = tf.reduce_mean(smloss)
 
