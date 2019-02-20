@@ -54,34 +54,35 @@ class dnet2d():
             drate = ei[2]
             strides = 1
             padding = 'same'
-            print(ei, type(strides))
+          
             name = 'net-layer-{}-0'.format(i)
             ph = layers[-1]
+            print(ei, ph)
             h = tf.layers.conv2d(ph, nfilters, ksize, strides=strides,
                                  padding=padding, dilation_rate=drate,
                                  kernel_initializer=self.get_init(self.stdev),
                                  name=name, activation=None)
 
-            print(h)
             h = tf.nn.relu(h)
             name = 'net-layer-{}'.format(i)
             h = tf.layers.conv2d(h, nfilters, ksize, strides=strides, dilation_rate=drate,
                                  padding=padding,
                                  kernel_initializer=self.get_init(self.stdev),
                                  name=name, activation=None)
-
-            print(h)
-            print(ph)
-            print('----')
-            if i == 0:
-                layers.append(h)
-                continue
-            
+       
+#             if i == 0:
+#                 layers.append(h)
+#                 continue
+            layers.append(h) ## only append the second convolution
+            print(layers)
             if i < (len(self.net_sizes) - 2):
                 h = tf.nn.relu(h)
-                h = ph + h
+                #h = ph + h
+                name='concat-{}-{}-{}'.format(i, drate, nfilters)
+                print('---', name)
+                h = tf.concat(layers, -1, name=name)
+                print(h)
             
-            layers.append(h) ## only append the second convolution
             
 
         ### end the for loop for encoder layers
