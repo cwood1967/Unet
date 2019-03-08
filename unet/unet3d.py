@@ -142,7 +142,7 @@ class unet3d():
 #        td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4))  
         td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask))
 #        print("mmse loss", td.shape)
-        self.loss = tf.reduce_mean(loss) + td
+        self.loss = tf.reduce_mean(loss) + 0*td
 
 
     def create_opt(self):
