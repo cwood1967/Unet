@@ -60,16 +60,27 @@ class dnet2d():
             print(ei, ph)
             h = tf.layers.conv2d(ph, nfilters, ksize, strides=strides,
                                  padding=padding, dilation_rate=drate,
+                                 use_bias=True,
                                  kernel_initializer=self.get_init(self.stdev),
                                  name=name, activation=None)
 
             h = tf.nn.relu(h)
             name = 'net-layer-{}'.format(i)
-            h = tf.layers.conv2d(h, nfilters, ksize, strides=strides, dilation_rate=drate,
-                                 padding=padding,
-                                 kernel_initializer=self.get_init(self.stdev),
-                                 name=name, activation=None)
-       
+            if i < (len(self.net_sizes) - 2):
+                h = tf.layers.conv2d(h, nfilters, ksize, strides=strides, dilation_rate=drate,
+                                    padding=padding,
+                                    use_bias=True,
+                                    kernel_initializer=self.get_init(self.stdev),
+                                    name=name, activation=None)
+            else:
+                nc = self.width*self.height
+                h = tf.layers.conv2d(h, nfilters, ksize, strides=strides, dilation_rate=drate,
+                            padding=padding,
+                            use_bias=True,
+                            kernel_initializer=tf.constant_initializer(value=0.0),
+                            bias_initializer=tf.constant_initializer(value=.33333),
+                            name=name, activation=None)
+
 #             if i == 0:
 #                 layers.append(h)
 #                 continue
@@ -107,9 +118,10 @@ class dnet2d():
             name = 'decoder-layer-{}'.format(nfilters)
             ph = layers[-1]
             h = tf.layers.conv2d_transpose(ph, nfilters, ksize, strides,
-                                           padding = 'same',
-                                           activation=None,
-                                           name=name)
+                                padding = 'same',
+                                use_bias=False,
+                                activation=None,
+                                name=name)
 
             #h = self.leaky_relu(h)
             #if i < (len(self.dec_sizes) - 1):
@@ -124,6 +136,7 @@ class dnet2d():
             h = tf.layers.conv2d(h, nfilters, ksize, strides=1, padding='same',
                                  dilation_rate=2,
                           kernel_initializer=self.get_init(self.stdev),
+                          use_bias=False,
                           name='decoder-conv-{}-1'.format(nfilters),
                           activation=None)
             if i < (len(self.dec_sizes) - 2):
@@ -160,7 +173,7 @@ class dnet2d():
         #td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask))
         #tn = -tf.reduce_mean(tf.log(self.decoder_sigmoid + .00001))
 #        print("mmse loss", td.shape)
-        self.loss = tf.reduce_mean(smloss)
+        self.loss = tf.reduce_mean(sigloss)
 
 
     def create_opt(self):
@@ -223,8 +236,8 @@ class dnet2d():
     def get_patch(self, rf, rx, ry, test=False):
         if test:
             data=self.xtest
-            labels = 0*self.y
-            labels = labels[:data.shape[0]]
+            labels = self.ytest
+            #labels = labels[:data.shape[0]]
             rf = 0
         else:
             data = self.x
@@ -241,8 +254,8 @@ class dnet2d():
         erode = 0
         if test:
             data = self.xtest
-            labels = 0*self.y
-            labels = labels[data.shape[0]]
+            labels = self.ytest
+            #labels = labels[data.shape[0]]
         else:
             data = self.x
             labels = self.y
