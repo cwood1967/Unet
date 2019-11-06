@@ -39,7 +39,13 @@ class unet2d():
     def get_init(self, stdev):
         #return tf.truncated_normal_initializer(stddev=stdev)
         return None
+<<<<<<< HEAD
     
+=======
+    def get_regularizer(self, scale=1.):
+        return tf.contrib.layers.l2_regularizer(scale)
+
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
     def create_encoder(self, images, is_train):
         '''The encoder part of the network, must include weight tensors
         for concatenation, get the network sizes from the class'''
@@ -56,6 +62,7 @@ class unet2d():
             name = 'encoder-layer-{}-0'.format(nfilters)
             ph = layers[-1]
             h = tf.layers.conv2d(ph, nfilters, ksize, strides=strides,
+<<<<<<< HEAD
                                  padding=padding, dilation_rate=1,
                                  kernel_initializer=self.get_init(self.stdev),
                                  name=name, activation=None)
@@ -78,10 +85,38 @@ class unet2d():
             # if self.droprate > 0:
             #     h = self.dropout(h, self.droprate, is_train)
     
+=======
+                                kernel_regularizer=self.get_regularizer(),
+                                padding=padding, dilation_rate=1,
+                                use_bias=True,
+                                kernel_initializer=self.get_init(self.stdev),
+                                name=name, activation=None)
+
+            #h = self.leaky_relu(h)
+            if i < (len(self.enc_sizes) - 1):
+                #h = tf.nn.relu(h)
+                h = tf.nn.leaky_relu(h)
+
+            name = 'encoder-layer-{}'.format(nfilters)
+            h = tf.layers.conv2d(h, nfilters, ksize, strides=1, dilation_rate=1,
+                                kernel_regularizer=self.get_regularizer(),
+                                padding=padding,
+                                use_bias=True,
+                                kernel_initializer=self.get_init(self.stdev),
+                                name=name, activation=None)
+
+            if i < (len(self.enc_sizes) - 1):
+                #h = tf.nn.relu(h)
+                h = tf.nn.leaky_relu(h)
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
             layers.append(h) ## only append the second convolution
             ### use identity to rename the final tensor 
 
         ### end the for loop for encoder layers
+<<<<<<< HEAD
+=======
+        
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
         h = tf.identity(h, name='encoder-{}'.format(nfilters))    
         self.encoder_layers = layers
         self.encoder = h
@@ -100,6 +135,7 @@ class unet2d():
             name = 'decoder-layer-{}'.format(nfilters)
             ph = layers[-1]
             h = tf.layers.conv2d_transpose(ph, nfilters, ksize, strides,
+<<<<<<< HEAD
                                            padding = 'same',
                                            activation=None,
                                            name=name)
@@ -107,6 +143,17 @@ class unet2d():
             #h = self.leaky_relu(h)
             #if i < (len(self.dec_sizes) - 1):
             #    h = tf.nn.relu(h)
+=======
+                                        kernel_regularizer=self.get_regularizer(),
+                                        padding = 'same',
+                                        use_bias=True,
+                                        activation=None,
+                                        kernel_initializer=None,
+                                        name=name)
+
+            
+            h = tf.nn.leaky_relu(h)
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
             nl = len(self.encoder_layers) - i - 2
             print(h)
             print(nl, self.encoder_layers[nl])
@@ -114,6 +161,7 @@ class unet2d():
                           name='concat-{}'.format(nfilters))
 
             print('after concat', h)
+<<<<<<< HEAD
             h = tf.layers.conv2d(h, nfilters, ksize, strides=1, padding='same',
                                  dilation_rate=2,
                           kernel_initializer=self.get_init(self.stdev),
@@ -131,11 +179,47 @@ class unet2d():
 
             if i < (len(self.dec_sizes) - 2):
                 h = self.leaky_relu(h)
+=======
+            h = tf.layers.conv2d(h, nfilters, ksize, strides=1,
+                            kernel_regularizer=self.get_regularizer(),
+                            padding='same',
+                            kernel_initializer=None, #self.get_init(self.stdev),
+                            use_bias=True,
+                            name='decoder-conv-{}-1'.format(nfilters),
+                            activation=None)
+
+            if i < (len(self.dec_sizes) - 2):
+                h = tf.nn.leaky_relu(h)
+                #h = tf.nn.relu(h)
+            print(h)
+
+            if i < (len(self.dec_sizes) - 2):
+                h = tf.layers.conv2d(h, nfilters, ksize, strides=1, padding='same',
+                            kernel_regularizer=self.get_regularizer(),
+                            kernel_initializer=None, #self.get_init(self.stdev),
+                            name='decoder-conv-{}-2'.format(nfilters),
+                            use_bias=True,
+                            activation=None)
+                
+                h = self.leaky_relu(h)
+            else:
+                h = tf.layers.conv2d(h, nfilters, ksize, strides=1, padding='same',
+                        kernel_regularizer=self.get_regularizer(),
+                        kernel_initializer=tf.constant_initializer(value=(0)),
+                        bias_initializer=tf.constant_initializer(value=(1./3)),
+                        name='decoder-conv-{}-2'.format(nfilters),
+                        use_bias=True,
+                        activation=None)
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
 
             layers.append(h)
                 # print(h)
             #ph = h
+<<<<<<< HEAD
             
+=======
+        
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
         h = tf.identity(h, name='decoder-{}'.format(nfilters))
         self.decoder_sigmoid = tf.sigmoid(h, name='decoder-sigmoid')
         self.decoder_softmax = tf.nn.softmax(h, dim=-1, name='decoder-softmax')
@@ -148,6 +232,7 @@ class unet2d():
                                                         name='sce_loss')
         smloss = tf.nn.softmax_cross_entropy_with_logits_v2(labels = batch_mask,
                                                           logits=self.decoder,
+<<<<<<< HEAD
                                                           dim=-1,
                                                           name='softmax_loss')
         
@@ -155,6 +240,22 @@ class unet2d():
         #tn = -tf.reduce_mean(tf.log(self.decoder_sigmoid + .00001))
 #        print("mmse loss", td.shape)
         self.loss = tf.reduce_mean(smloss)
+=======
+                                                          axis=-1,
+                                                          name='softmax_loss')
+        
+        l2_loss = tf.losses.get_regularization_loss()
+        # sum_mask = tf.reduce_mean(batch_mask, axis=(1,2))
+        # sum_sm = tf.reduce_mean(self.decoder_softmax, axis=(1,2))
+        # ds = tf.abs(tf.subtract(sum_mask, sum_sm))
+        # print(sum_mask)
+        # print(sum_sm)
+        # print(ds)
+        td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask))
+        #tn = -tf.reduce_mean(tf.log(self.decoder_sigmoid + .00001), axis=-1)
+#        print("mmse loss", td.shape)
+        self.loss = tf.reduce_mean(sigloss) + 0.0*l2_loss
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
 
 
     def create_opt(self):
@@ -217,8 +318,13 @@ class unet2d():
     def get_patch(self, rf, rx, ry, test=False):
         if test:
             data=self.xtest
+<<<<<<< HEAD
             labels = 0*self.y
             labels = labels[:data.shape[0]]
+=======
+            labels = self.ytest
+            #labels = labels[:data.shape[0]]
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
             rf = 0
         else:
             data = self.x
@@ -235,8 +341,13 @@ class unet2d():
         erode = 0
         if test:
             data = self.xtest
+<<<<<<< HEAD
             labels = 0*self.y
             labels = labels[data.shape[0]]
+=======
+            labels = self.ytest
+            #labels = labels[data.shape[0]]
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
         else:
             data = self.x
             labels = self.y
@@ -245,10 +356,21 @@ class unet2d():
         batch = np.zeros((num, size, size, data.shape[-1]), dtype=np.float32)
         mask = np.zeros((num, size, size, labels.shape[-1]), dtype=np.float32)
 
+<<<<<<< HEAD
         if ones == None:
             xrand = np.random.randint(d, data.shape[2] - d, num)
             yrand = np.random.randint(d, data.shape[1] - d, num)
             frand = np.random.randint(0, data.shape[0], num)
+=======
+        if ones == None and size < data.shape[1]:
+            xrand = np.random.randint(d, data.shape[2] - d, num)
+            yrand = np.random.randint(d, data.shape[1] - d, num)
+            frand = np.random.randint(0, data.shape[0], num)
+        elif size >= data.shape[1]:
+            xrand = d + np.zeros(num, dtype=np.int32)
+            yrand = d + np.zeros(num, dtype=np.int32)
+            frand = np.random.randint(0, data.shape[0], num)
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
         else:
             orand = np.random.randint(2, num-2)
             fones = ones[0]
@@ -279,6 +401,7 @@ class unet2d():
             #print(a.shape)
             batch[i] = a
             mask[i] = b
+<<<<<<< HEAD
             '''
             for ki in range(erode):
                 #print(erode, i)
@@ -290,6 +413,9 @@ class unet2d():
             b[:,:,-1] = 1 - b.max(axis=-1)
             mask[i] = b
             '''
+=======
+            
+>>>>>>> a503dcad3a67ba3c7c39e1ca6496c470771aab34
         rot = np.random.randint(0,4)
         batch = np.rot90(batch, k=rot, axes=(1,2))
         mask = np.rot90(mask, k=rot, axes=(1,2))

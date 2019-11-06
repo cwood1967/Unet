@@ -8,3 +8,4 @@ checkpoint*
 .*
 !.gitignore
 *~
+logs
