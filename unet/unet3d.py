@@ -26,7 +26,6 @@ class unet3d():
         self.used = dict()
 
     def leaky_relu(self, x, alpha=0.2):
-
         return tf.maximum(x*alpha, x)
 
     def dropout(self, x, rate, is_train):
@@ -56,12 +55,13 @@ class unet3d():
             h = tf.layers.conv3d(ph, nfilters, ksize, strides=strides,
                                  padding=padding,
                                  kernel_initializer=self.get_init(self.stdev),
+                                 use_bias=False,
                                  name=name, activation=None)
             #h = self.leaky_relu(h)
-            #if i < (len(self.enc_sizes) - 1):
-            #    h = tf.nn.relu(h)
-            if self.droprate > 0:
-                h = self.dropout(h, self.droprate, is_train)
+            if i < (len(self.enc_sizes) - 1):
+               h = tf.nn.relu(h)
+            # if self.droprate > 0:
+            #     h = self.dropout(h, self.droprate, is_train)
 
             name = 'encoder-layer-{}'.format(nfilters)
             # h = tf.layers.conv3d(h, nfilters, ksize, strides=1,
@@ -96,12 +96,13 @@ class unet3d():
             ph = layers[-1]
             h = tf.layers.conv3d_transpose(ph, nfilters, ksize, strides,
                                            padding = 'same',
+                                           use_bias=False,
                                            activation=None,
                                            name=name)
 
             #h = self.leaky_relu(h)
-            #if i < (len(self.dec_sizes) - 1):
-            #    h = tf.nn.relu(h)
+            if i < (len(self.dec_sizes) - 1):
+                h = tf.nn.relu(h)
             nl = len(self.encoder_layers) - i - 2
             print(h)
             print(nl, self.encoder_layers[nl])
@@ -112,10 +113,11 @@ class unet3d():
             h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
                           kernel_initializer=self.get_init(self.stdev),
                           name='decoder-conv-{}-1'.format(nfilters),
+                          use_bias=False,
                           activation=None)
-            #if i < (len(self.dec_sizes) - 1):
+            if i < (len(self.dec_sizes) - 1):
                 #h = self.leaky_relu(h)
-            #    h = tf.nn.relu(h)
+                h = tf.nn.relu(h)
             print(h)
             layers.append(h)
             # h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
@@ -175,7 +177,7 @@ class unet3d():
 
     def read_mm(self, mmpath, shape):
         self.x = np.memmap(mmpath, dtype=np.float32, mode='r', shape=shape)
-        self.x = np.moveaxis(self.x, 3, 1)
+        #self.x = np.moveaxis(self.x, 3, 1)
         
     def augment_batch(self, b, nr):
         n = b.shape[0]
