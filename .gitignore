@@ -9,3 +9,5 @@ checkpoint*
 !.gitignore
 *~
 logs
+.tif
+__pycache__
