@@ -8,7 +8,7 @@ def check_extent(n, f, e):
         e = e - d
     return (e, f)
 
-def makes_patches(image, patch_shape=(8, 256, 256)):
+def make_patches(image, patch_shape=(8, 256, 256)):
     nz, nc, ny, nx = image.shape
     ez = 0
     ex = 0
@@ -48,10 +48,10 @@ def augment_rotate(stack, step, axes=(-1, -2)):
     angle = step
     res = stack.copy()
     while angle < 360:
-        print(angle)
-        r = rotate(stack, step, axes=axes, reshape=False)
+        #print(angle)
+        r = rotate(stack, angle, axes=axes, reshape=False)
         res = np.concatenate([res, r], axis=0)
-        print(res.shape)
+        #print(res.shape)
         angle += step
 
     return res #np.concatenate([stack, r], axis = 0)
@@ -92,11 +92,11 @@ def reconstruct(patches, w, nx, ny):
             #print(patch_index, ys, ymax, xs, xmax, yok, xok)
     return image
 
-def patches_to_image(patches, w, nx, ny):
-    r1 = patches_to_image(dp, 256, data.shape[1] , data.shape[0])
-    r2 = patches_to_image(dp2, 256, data.shape[1] - 0, data.shape[0] - 128)
-    r3 = patches_to_image(dp3, 256, data.shape[1] - 128, data.shape[0] - 0)
-    r4 = patches_to_image(dp4, 256, data.shape[1] - 128, data.shape[0] - 128)
+def patch_to_image(patches, w, nx, ny):
+    r1 = reconstruct(dp, 256, data.shape[1] , data.shape[0])
+    r2 = reconstruct(dp2, 256, data.shape[1] - 0, data.shape[0] - 128)
+    r3 = reconstruct(dp3, 256, data.shape[1] - 128, data.shape[0] - 0)
+    r4 = reconstruct(dp4, 256, data.shape[1] - 128, data.shape[0] - 128)
 
     rr2 = np.zeros_like(r1)
     rr2[128:, :, :] = r2

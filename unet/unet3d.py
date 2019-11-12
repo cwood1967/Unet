@@ -62,7 +62,7 @@ class unet3d():
                                  name=name, activation=None)
             #h = self.leaky_relu(h)
             if i < (len(self.enc_sizes) - 1):
-               h = tf.nn.relu(h)
+               h = tf.nn.leaky_relu(h)
             # if self.droprate > 0:
             #     h = self.dropout(h, self.droprate, is_train)
 
@@ -104,8 +104,8 @@ class unet3d():
                                            name=name)
 
             #h = self.leaky_relu(h)
-            if i < (len(self.dec_sizes) - 1):
-                h = tf.nn.relu(h)
+            #if i < (len(self.dec_sizes) - 1):
+            h = tf.nn.leaky_relu(h)
             nl = len(self.encoder_layers) - i - 2
             print(h)
             print(nl, self.encoder_layers[nl])
@@ -120,7 +120,7 @@ class unet3d():
                           activation=None)
             if i < (len(self.dec_sizes) - 1):
                 #h = self.leaky_relu(h)
-                h = tf.nn.relu(h)
+                h = tf.nn.leaky_relu(h)
             print(h)
             layers.append(h)
             # h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',

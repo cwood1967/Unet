@@ -1,6 +1,5 @@
 
 import numpy as np
-import napari
 from read_roi import read_roi_file, read_roi_zip 
 import tifffile
 import scipy.ndimage as nd
@@ -36,12 +35,12 @@ def marks_to_mask(image, marks, blur=None):
     return mask
 
 def points_to_mask(roiszip, image, blur):
-    marks = marks_from_roizip(roifile)
+    marks = marks_from_roizip(roiszip)
     mask = marks_to_mask(image, marks, blur=blur)
     return mask
 
     
-roifile = "/Volumes/core/micro/asa/fgm/smc/20190919_Screen/cjw_training/RoiSet_training_002.zip"
-image =  tifffile.imread("/Volumes/core/micro/asa/fgm/smc/20190919_Screen/cjw_training/training_002.tif")
+#roifile = "/Volumes/core/micro/asa/fgm/smc/20190919_Screen/cjw_training/RoiSet_training_002.zip"
+#image =  tifffile.imread("/Volumes/core/micro/asa/fgm/smc/20190919_Screen/cjw_training/training_002.tif")
 
 
