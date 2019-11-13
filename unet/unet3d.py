@@ -136,7 +136,12 @@ class unet3d():
         h = tf.identity(h, name='decoder-{}'.format(nfilters))
         self.decoder_sigmoid = tf.sigmoid(h, name='decoder-sigmoid')
         self.decoder = h
-            
+
+    def create_dice_loss(self, batch_mask):
+        t = 2*tf.reduce_sum(batch_mask*self.decoder_sigmoid)       
+        b = tf.reduce_sum(batch_mask + self.decoder_sigmoid)
+        return 1 - (t + 1)/(b + 1)
+
     def create_loss(self, batch_mask):
         ''' calculate the loss of the network - cross entropy of input with output pixels'''
         loss =  tf.nn.sigmoid_cross_entropy_with_logits(labels=batch_mask,
@@ -147,7 +152,7 @@ class unet3d():
 #        td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4))  
         td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask))
 #        print("mmse loss", td.shape)
-        self.loss = tf.reduce_mean(loss) + 0*td
+        self.loss = .0*self.create_dice_loss(batch_mask) + 1.*tf.reduce_mean(loss) + 1*td
 
 
     def create_opt(self):
