@@ -59,20 +59,18 @@ class unet3d():
                                  padding=padding,
                                  kernel_initializer=self.get_init(self.stdev),
                                  use_bias=False,
-                                 name=name, activation=None)
+                                 name=None, activation=None)
             #h = self.leaky_relu(h)
-            if i < (len(self.enc_sizes) - 1):
-               h = tf.nn.leaky_relu(h)
-            # if self.droprate > 0:
-            #     h = self.dropout(h, self.droprate, is_train)
-
-            name = 'encoder-layer-{}'.format(nfilters)
+            
+            # name = 'encoder-layer-{}'.format(nfilters)
             # h = tf.layers.conv3d(h, nfilters, ksize, strides=1,
             #                      padding=padding,
             #                      kernel_initializer=self.get_init(self.stdev),
+            #                      use_bias=False,
             #                      name=name, activation=None)
             
-            # h = self.leaky_relu(h)
+            if i < (len(self.enc_sizes) - 1):
+               h = tf.nn.leaky_relu(h)
             # if self.droprate > 0:
             #     h = self.dropout(h, self.droprate, is_train)
     
@@ -101,7 +99,7 @@ class unet3d():
                                            padding = 'same',
                                            use_bias=False,
                                            activation=None,
-                                           name=name)
+                                           name=None)
 
             #h = self.leaky_relu(h)
             #if i < (len(self.dec_sizes) - 1):
@@ -110,35 +108,39 @@ class unet3d():
             print(h)
             print(nl, self.encoder_layers[nl])
             h = tf.concat([h, self.encoder_layers[nl]], -1,
-                          name='concat-{}'.format(nfilters))
+                          name=None)
 
             print('after concat', h)
             h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
                           kernel_initializer=self.get_init(self.stdev),
-                          name='decoder-conv-{}-1'.format(nfilters),
+                          name=None,
                           use_bias=False,
                           activation=None)
-            if i < (len(self.dec_sizes) - 1):
-                #h = self.leaky_relu(h)
-                h = tf.nn.leaky_relu(h)
-            print(h)
-            layers.append(h)
+            
+            # h = tf.nn.leaky_relu(h)
+            # print(h)
+            
             # h = tf.layers.conv3d(h, nfilters, ksize, strides=1, padding='same',
             #               kernel_initializer=self.get_init(self.stdev),
             #               name='decoder-conv-{}-2'.format(nfilters),
+            #               use_bias=False,
             #               activation=None)
 
-            # if i < (len(self.dec_sizes) - 2):
-            #     h = self.leaky_relu(h)
+            print(i, di, len(self.dec_sizes) )
+            if i < (len(self.dec_sizes) - 1):
+                print("--", i, di, len(self.dec_sizes) )
+                h = self.leaky_relu(h)
+            layers.append(h)
             # print(h)
             #ph = h
             
-        h = tf.identity(h, name='decoder-{}'.format(nfilters))
+        h = tf.identity(h, name=None)
         self.decoder_sigmoid = tf.sigmoid(h, name='decoder-sigmoid')
+        #self.decoder_softmax = tf.nn.softmax(h, name='decoder-sigmoid')
         self.decoder = h
 
     def create_dice_loss(self, batch_mask):
-        t = 2*tf.reduce_sum(batch_mask*self.decoder_sigmoid)       
+        t = 2*tf.reduce_sum(batch_mask[:,:,:,:,0]*self.decoder_sigmoid[:,:,:,:,0])       
         b = tf.reduce_sum(batch_mask + self.decoder_sigmoid)
         return 1 - (t + 1)/(b + 1)
 
@@ -147,12 +149,16 @@ class unet3d():
         loss =  tf.nn.sigmoid_cross_entropy_with_logits(labels=batch_mask,
                                                         logits=self.decoder,
                                                         name='sce_loss')
+        #loss =  tf.nn.softmax_cross_entropy_with_logits(labels=batch_mask,
+        #                                                logits=self.decoder,
+        #                                                name='sce_loss')
         
 #        s = tf.abs(tf.reduce_sum(self.decoder_sigmoid))
 #        td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask), axis=(1,2,3,4))  
         td = tf.reduce_mean(tf.square(self.decoder_sigmoid - batch_mask))
 #        print("mmse loss", td.shape)
-        self.loss = .0*self.create_dice_loss(batch_mask) + 1.*tf.reduce_mean(loss) + 1*td
+        self.loss = 0.*self.create_dice_loss(batch_mask) + 1.*tf.reduce_mean(loss) + 0.*td
+        #self.loss = tf.reduce_mean(loss)
 
 
     def create_opt(self):
